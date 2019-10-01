@@ -27,6 +27,7 @@ q[3]=np.random.uniform(-1,1)/10
 q[4]=np.random.uniform(-1,1)/10
 q[5]=np.random.uniform(-1,1)/10
 normalize(q[3:7])
+
 solo.display(q)
  
 ### Moving the feet to the ground
@@ -102,7 +103,6 @@ for i in range(2000):
 	solo.display(q)
 	
 	hist_err.append(np.linalg.norm(nu))
-
 
 ### Ploting the norm of the error during time
 import matplotlib.pylab as plt
