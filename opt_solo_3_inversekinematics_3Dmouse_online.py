@@ -22,14 +22,38 @@ def normalize(quaternion):
 	assert(norm_q>1e-6)
 	return quaternion/norm_q
 		
-### Random configuration
+"""### Random configuration
 q[3]=np.random.uniform(-1,1)/10
 q[4]=np.random.uniform(-1,1)/10
 q[5]=np.random.uniform(-1,1)/10
 normalize(q[3:7])
+solo.display(q)"""
 
-solo.display(q)
- 
+### Spacemouse configuration
+import spacenav as sp
+import atexit
+
+try:
+	# open the connection
+	print("Opening connection to SpaceNav driver ...")
+	sp.open()
+	print("... connection established.")
+	# register the close function if no exception was raised
+	atexit.register(sp.close)
+except sp.ConnectionError:
+	# give some user advice if the connection failed 
+	print("No connection to the SpaceNav driver. Is spacenavd running?")
+	sys.exit(-1)
+
+# reset exit condition
+stop = False
+
+# initialize velocity vector
+vq = np.zeros([14,1])
+
+dt = 1e-2	# Integration step
+
+
 ### Moving the feet to the ground
 
 # Getting the frame index of each foot
@@ -38,16 +62,27 @@ ID_FR = solo.model.getFrameId("FR_FOOT")
 ID_HL = solo.model.getFrameId("HL_FOOT")
 ID_HR = solo.model.getFrameId("HR_FOOT")
 
-dt = 0.01	#Integration step
-
-#q[8]=np.pi/2
-#q[7]=0
-
 hist_err = [] 	#To see the error convergence
 
-for i in range(2000):
+# loop over space navigator events
+while not stop:
+	# return the next event if there is any
+	event = sp.poll()
+
+	# if event signals the release of the first button
+	if type(event) is sp.ButtonEvent \
+		and event.button == 0 and event.pressed == 0:
+		# set exit condition
+		stop = True
+	# matching the mouse signals with the position of Solo's basis
+	if type(event) is sp.MotionEvent :
+		vq[3] = event.rx/100.0
+		#vq[5] = event.ry/100.0
+		vq[4] = event.rz/100.0
+		q = pin.integrate(solo.model, q, vq*dt)
+		solo.display(q)
+		
 	pin.forwardKinematics(solo.model, solo.data, q)
-	pin.framesForwardKinematics(solo.model, solo.data, q)	#useless ?
 	pin.updateFramePlacements(solo.model, solo.data)
 	
 	# Getting the current height (on axis z) of each foot
@@ -93,7 +128,6 @@ for i in range(2000):
 	
 	# Computing the velocity
 	vq_act = -pinv(J)*nu
-	#vq_act = -pinv(oJ_FLz)*err_FL[2]
 	vq = np.concatenate( (np.zeros([6,1]) , vq_act))
 	
 	# Computing the updated configuration
@@ -102,13 +136,17 @@ for i in range(2000):
 	
 	solo.display(q)
 	
-	hist_err.append(np.linalg.norm(nu))
+	hist_err.append(np.linalg.norm(nu))	
+	
+	
 
+'''
 ### Ploting the norm of the error during time
 import matplotlib.pylab as plt
 plt.ion()
 plt.plot(hist_err)
 plt.grid()
 plt.title('Error course vs time')
+'''
 
 embed()
