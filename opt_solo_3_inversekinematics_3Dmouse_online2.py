@@ -54,6 +54,9 @@ rpy = np.zeros(3)
 
 dt = 1e-2	# Integration step
 
+# Convergence gain
+Kp = 30
+
 # Getting the frame index of each foot
 ID_FL = solo.model.getFrameId("FL_FOOT")
 ID_FR = solo.model.getFrameId("FR_FOOT")
@@ -83,7 +86,7 @@ while not stop:
 		rpy[1] += Vpitch*dt		#pitch
 		rpy[2] += Vyaw*dt		#yaw
 		# adding saturation to prevent unlikely configurations
-		for i in range(3):
+		for i in range(2):
 			if rpy[i]>0.175 or rpy[i]<-0.175:
 				rpy[i] = np.sign(rpy[i])*0.175
 		# convert rpy to quaternion
@@ -142,7 +145,7 @@ while not stop:
 	J = np.vstack([oJ_FLz, oJ_FRz, oJ_HLz, oJ_HRz, omega*J_post])
 	
 	# Computing the velocity
-	vq_act = -pinv(J)*nu
+	vq_act = -Kp*pinv(J)*nu
 	vq = np.concatenate( (np.zeros([6,1]) , vq_act))
 	
 	# Computing the updated configuration
